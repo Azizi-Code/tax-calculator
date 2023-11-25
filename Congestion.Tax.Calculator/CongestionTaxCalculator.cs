@@ -1,4 +1,5 @@
-﻿using Congestion.Tax.Calculator.Vehicles;
+﻿using System.ComponentModel;
+using Congestion.Tax.Calculator.Vehicles;
 
 namespace Congestion.Tax.Calculator;
 
@@ -13,6 +14,11 @@ public class CongestionTaxCalculator
          */
     public int GetTax(IVehicle vehicle, DateTime[] dates)
     {
+        ValidateInputParameters(vehicle, dates);
+
+
+        if (IsTollFreeDate(dates[0]) || IsTollFreeVehicle(vehicle)) return 0;
+
         DateTime intervalStart = dates[0];
         int totalFee = 0;
         foreach (DateTime date in dates)
@@ -39,30 +45,49 @@ public class CongestionTaxCalculator
         return totalFee;
     }
 
-    public bool IsTollFreeVehicle(IVehicle vehicle) => vehicle != null
-        ? Enum.IsDefined(typeof(TollFreeVehicles), vehicle.GetVehicleType().ToString())
-        : false;
+    private void ValidateInputParameters(IVehicle vehicle, DateTime[] dates)
+    {
+        if (dates == null || dates.Length == 0)
+            throw new ArgumentException("Dates can't be null or empty.");
+
+        if (vehicle == null)
+            throw new ArgumentNullException(nameof(vehicle), "Vehicle can't be null.");
+
+        var firstDate = dates.First().Date;
+        var isAllDatesAreInASameDay = dates.All(x => x.Date == firstDate);
+        if (!isAllDatesAreInASameDay) throw new ArgumentException("All the date times should be in a same day.");
+    }
+
 
     public int GetTollFee(DateTime date, IVehicle vehicle)
     {
-        if (IsTollFreeDate(date) || IsTollFreeVehicle(vehicle)) return 0;
-
         int hour = date.Hour;
         int minute = date.Minute;
 
-        if (hour == 6 && minute >= 0 && minute <= 29) return 8;
-        else if (hour == 6 && minute >= 30 && minute <= 59) return 13;
-        else if (hour == 7 && minute >= 0 && minute <= 59) return 18;
-        else if (hour == 8 && minute >= 0 && minute <= 29) return 13;
-        else if (hour >= 8 && hour <= 14 && minute >= 30 && minute <= 59) return 8;
-        else if (hour == 15 && minute >= 0 && minute <= 29) return 13;
-        else if (hour == 15 && minute >= 0 || hour == 16 && minute <= 59) return 18;
-        else if (hour == 17 && minute >= 0 && minute <= 59) return 13;
-        else if (hour == 18 && minute >= 0 && minute <= 29) return 8;
-        else return 0;
+        if ((hour == 6 && minute >= 0 && minute <= 29) ||
+            (hour >= 8 && hour <= 14 && minute >= 30 && minute <= 59) ||
+            (hour == 18 && minute >= 0 && minute <= 29))
+            return 8;
+
+        if ((hour == 6 && minute >= 30 && minute <= 59) ||
+            (hour == 8 && minute >= 0 && minute <= 29) ||
+            (hour == 15 && minute >= 0 && minute <= 29) ||
+            (hour == 17 && minute >= 0 && minute <= 59))
+            return 13;
+
+        if ((hour == 7 && minute >= 0 && minute <= 59) ||
+            hour == 15 && minute >= 30 || //there was an issue here. minutes was 0.
+            hour == 16 && minute <= 59)
+            return 18;
+
+        return 0;
     }
 
-    public bool IsTollFreeDate(DateTime date)
+    private bool IsTollFreeVehicle(IVehicle vehicle) =>
+        Enum.IsDefined(typeof(TollFreeVehicles), vehicle.GetVehicleType().ToString());
+
+
+    private bool IsTollFreeDate(DateTime date)
     {
         if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday || date.Month == 7) return true;
 
