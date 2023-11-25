@@ -1,9 +1,9 @@
 namespace Congestion.Tax.Calculator.Vehicles;
 
-public class Motorbike : Vehicle
+public class Motorbike : IVehicle
 {
-    public string GetVehicleType()
+    public VehicleType GetVehicleType()
     {
-        return "Motorbike";
+        return VehicleType.Motorcycle;
     }
 }

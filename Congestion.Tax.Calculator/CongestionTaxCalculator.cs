@@ -11,8 +11,7 @@ public class CongestionTaxCalculator
          * @param dates   - date and time of all passes on one day
          * @return - the total congestion tax for that day
          */
-
-    public int GetTax(Vehicle vehicle, DateTime[] dates)
+    public int GetTax(IVehicle vehicle, DateTime[] dates)
     {
         DateTime intervalStart = dates[0];
         int totalFee = 0;
@@ -35,23 +34,16 @@ public class CongestionTaxCalculator
                 totalFee += nextFee;
             }
         }
+
         if (totalFee > 60) totalFee = 60;
         return totalFee;
     }
 
-    private bool IsTollFreeVehicle(Vehicle vehicle)
-    {
-        if (vehicle == null) return false;
-        String vehicleType = vehicle.GetVehicleType();
-        return vehicleType.Equals(TollFreeVehicles.Motorcycle.ToString()) ||
-               vehicleType.Equals(TollFreeVehicles.Tractor.ToString()) ||
-               vehicleType.Equals(TollFreeVehicles.Emergency.ToString()) ||
-               vehicleType.Equals(TollFreeVehicles.Diplomat.ToString()) ||
-               vehicleType.Equals(TollFreeVehicles.Foreign.ToString()) ||
-               vehicleType.Equals(TollFreeVehicles.Military.ToString());
-    }
+    public bool IsTollFreeVehicle(IVehicle vehicle) => vehicle != null
+        ? Enum.IsDefined(typeof(TollFreeVehicles), vehicle.GetVehicleType().ToString())
+        : false;
 
-    public int GetTollFee(DateTime date, Vehicle vehicle)
+    public int GetTollFee(DateTime date, IVehicle vehicle)
     {
         if (IsTollFreeDate(date) || IsTollFreeVehicle(vehicle)) return 0;
 
@@ -92,16 +84,17 @@ public class CongestionTaxCalculator
                 return true;
             }
         }
+
         return false;
     }
 
     private enum TollFreeVehicles
     {
-        Motorcycle = 0,
-        Tractor = 1,
-        Emergency = 2,
-        Diplomat = 3,
-        Foreign = 4,
-        Military = 5
+        Motorcycle = VehicleType.Motorcycle,
+        Tractor = VehicleType.Tractor,
+        Emergency = VehicleType.Emergency,
+        Diplomat = VehicleType.Diplomat,
+        Foreign = VehicleType.Foreign,
+        Military = VehicleType.Military
     }
 }
