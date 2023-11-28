@@ -1,22 +1,23 @@
 using Congestion.Tax.Calculator.Vehicles;
 using Xunit;
+using static Congestion.Tax.Calculator.Tests.CongestionTaxCalculatorTestHarness;
 
 namespace Congestion.Tax.Calculator.Tests;
 
 public class CongestionTaxCalculator_GetTollFee
 {
     [Theory]
-    [MemberData(nameof(CustomTestData))]
-    public void FreeTollDates_ReturnsZeroToll(DateTime[] dateTime)
+    [MemberData(nameof(FreeTollDatesTestData))]
+    public void FreeTollDatesWithNonTollFreeVehicle_ReturnsZeroToll(DateTime[] dateTime)
     {
         var sut = new CongestionTaxCalculator();
 
-        var result = sut.CalculateTax(new Car(), dateTime);
+        var result = sut.CalculateTax(DefaultNonTollFreeVehicle, dateTime);
 
         Assert.Equal(0, result);
     }
 
-    public static IEnumerable<object[]> CustomTestData =>
+    public static IEnumerable<object[]> FreeTollDatesTestData =>
         new List<object[]>
         {
             new Object[] { new[] { new DateTime(2013, 1, 1, 6, 30, 0) } },
@@ -112,4 +113,11 @@ public class CongestionTaxCalculator_GetTollFee
             new Object[] { 18, new DateTime(2013, 1, 2, 15, 30, 0) },
             new Object[] { 18, new DateTime(2013, 1, 2, 16, 59, 0) }
         };
+}
+
+public static class CongestionTaxCalculatorTestHarness
+{
+    public static readonly IVehicle DefaultTollFreeVehicle = new Motorbike();
+    public static readonly IVehicle DefaultNonTollFreeVehicle = new Car();
+
 }

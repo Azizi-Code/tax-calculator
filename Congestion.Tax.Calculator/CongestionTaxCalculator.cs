@@ -99,9 +99,9 @@ public class CongestionTaxCalculator
     private static bool IsTollFreeVehicle(IVehicle vehicle) =>
         Enum.IsDefined(typeof(TollFreeVehicles), vehicle.GetVehicleType().ToString());
 
-    private static bool IsTollFreeDate(DateTime date)
+    private static bool IsTollFreeDate(DateTime dateTime)
     {
-        if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday || date.Month == 7) return true;
+        if (dateTime.DayOfWeek == DayOfWeek.Saturday || dateTime.DayOfWeek == DayOfWeek.Sunday || dateTime.Month == 7) return true;
 
         var vacations = new HashSet<DateTime>
         {
@@ -110,7 +110,7 @@ public class CongestionTaxCalculator
             new(2013, 6, 5), new(2013, 6, 6), new(2013, 6, 21), new(2013, 11, 1),
             new(2013, 12, 24), new(2013, 12, 25), new(2013, 12, 26), new(2013, 12, 31)
         };
-        return vacations.Contains(date);
+        return vacations.Contains(dateTime.Date);
     }
 
     private enum TollFreeVehicles
