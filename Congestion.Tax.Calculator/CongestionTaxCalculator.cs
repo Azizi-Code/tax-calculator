@@ -2,7 +2,7 @@
 
 namespace Congestion.Tax.Calculator;
 
-public class CongestionTaxCalculator
+public class CongestionTaxCalculator : ITaxCalculator
 {
     const int MaxFeePerDay = 60;
     private const int IntervalTimeoutInMinutes = 60;
@@ -101,7 +101,8 @@ public class CongestionTaxCalculator
 
     private static bool IsTollFreeDate(DateTime dateTime)
     {
-        if (dateTime.DayOfWeek == DayOfWeek.Saturday || dateTime.DayOfWeek == DayOfWeek.Sunday || dateTime.Month == 7) return true;
+        if (dateTime.DayOfWeek == DayOfWeek.Saturday || dateTime.DayOfWeek == DayOfWeek.Sunday ||
+            dateTime.Month == 7) return true;
 
         var vacations = new HashSet<DateTime>
         {
