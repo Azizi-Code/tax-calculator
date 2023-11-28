@@ -1,10 +1,12 @@
-﻿using System.ComponentModel;
-using Congestion.Tax.Calculator.Vehicles;
+﻿using Congestion.Tax.Calculator.Vehicles;
 
 namespace Congestion.Tax.Calculator;
 
 public class CongestionTaxCalculator
 {
+    const int MaxFeePerDay = 60;
+    private const int IntervalTimeoutInMinutes = 60;
+
     /**
          * Calculate the total toll fee for one day
          *
@@ -12,54 +14,52 @@ public class CongestionTaxCalculator
          * @param dates   - date and time of all passes on one day
          * @return - the total congestion tax for that day
          */
-    public int GetTax(IVehicle vehicle, DateTime[] dates)
+    public int CalculateTax(IVehicle vehicle, DateTime[] dates)
     {
         ValidateInputParameters(vehicle, dates);
 
+        if (IsTollFreeDate(dates[0]) || IsTollFreeVehicle(vehicle))
+            return 0;
 
-        if (IsTollFreeDate(dates[0]) || IsTollFreeVehicle(vehicle)) return 0;
+        dates = dates.OrderBy(x => x.Date).ToArray();
 
         DateTime intervalStart = dates[0];
+        DateTime intervalMaxFee = dates[0];
+
         int totalFee = 0;
         foreach (DateTime date in dates)
         {
-            int nextFee = GetTollFee(date, vehicle);
-            int tempFee = GetTollFee(intervalStart, vehicle);
+            int nextFee = GetTollFee(date);
+            int tempFee = GetTollFee(intervalMaxFee);
 
-            long diffInMillies = date.Millisecond - intervalStart.Millisecond;
-            long minutes = diffInMillies / 1000 / 60;
-
-            if (minutes <= 60)
+            var timeDifferenceInMinutes = (date - intervalStart).TotalMinutes;
+            if (timeDifferenceInMinutes <= IntervalTimeoutInMinutes)
             {
                 if (totalFee > 0) totalFee -= tempFee;
-                if (nextFee >= tempFee) tempFee = nextFee;
+                if (nextFee >= tempFee)
+                {
+                    tempFee = nextFee;
+                    intervalMaxFee = date;
+                }
+
                 totalFee += tempFee;
             }
             else
             {
                 totalFee += nextFee;
+                intervalStart = date;
+                intervalMaxFee = date;
             }
+
+            if (totalFee > MaxFeePerDay)
+                return MaxFeePerDay;
         }
 
-        if (totalFee > 60) totalFee = 60;
         return totalFee;
     }
 
-    private void ValidateInputParameters(IVehicle vehicle, DateTime[] dates)
-    {
-        if (dates == null || dates.Length == 0)
-            throw new ArgumentException("Dates can't be null or empty.");
 
-        if (vehicle == null)
-            throw new ArgumentNullException(nameof(vehicle), "Vehicle can't be null.");
-
-        var firstDate = dates.First().Date;
-        var isAllDatesAreInASameDay = dates.All(x => x.Date == firstDate);
-        if (!isAllDatesAreInASameDay) throw new ArgumentException("All the date times should be in a same day.");
-    }
-
-
-    public int GetTollFee(DateTime date, IVehicle vehicle)
+    public int GetTollFee(DateTime date)
     {
         int hour = date.Hour;
         int minute = date.Minute;
@@ -76,18 +76,30 @@ public class CongestionTaxCalculator
             return 13;
 
         if ((hour == 7 && minute >= 0 && minute <= 59) ||
-            hour == 15 && minute >= 30 || //there was an issue here. minutes was 0.
+            hour == 15 && minute >= 30 ||
             hour == 16 && minute <= 59)
             return 18;
 
         return 0;
     }
 
-    private bool IsTollFreeVehicle(IVehicle vehicle) =>
+    private static void ValidateInputParameters(IVehicle vehicle, DateTime[] dates)
+    {
+        if (dates == null || dates.Length == 0)
+            throw new ArgumentException("Dates can't be null or empty.");
+
+        if (vehicle == null)
+            throw new ArgumentNullException(nameof(vehicle), "Vehicle can't be null.");
+
+        var firstDate = dates.First().Date;
+        var isAllDatesAreInASameDay = dates.All(x => x.Date == firstDate);
+        if (!isAllDatesAreInASameDay) throw new ArgumentException("All the date times should be in a same day.");
+    }
+
+    private static bool IsTollFreeVehicle(IVehicle vehicle) =>
         Enum.IsDefined(typeof(TollFreeVehicles), vehicle.GetVehicleType().ToString());
 
-
-    private bool IsTollFreeDate(DateTime date)
+    private static bool IsTollFreeDate(DateTime date)
     {
         if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday || date.Month == 7) return true;
 
@@ -104,7 +116,7 @@ public class CongestionTaxCalculator
     private enum TollFreeVehicles
     {
         Motorcycle = VehicleType.Motorcycle,
-        Tractor = VehicleType.Tractor,
+        Bus = VehicleType.Bus,
         Emergency = VehicleType.Emergency,
         Diplomat = VehicleType.Diplomat,
         Foreign = VehicleType.Foreign,
